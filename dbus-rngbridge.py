@@ -29,7 +29,7 @@ sys.path.insert(
 from vedbus import VeDbusService
 
 
-class DbusShelly3emService:
+class DbusRngbridgeService:
     def __init__(
         self, paths, productname="RNGBridge", connection="RNGBridge HTTP JSON service"
     ):
@@ -62,7 +62,7 @@ class DbusShelly3emService:
         self._dbusservice.add_path("/ProductName", productname)
         self._dbusservice.add_path("/CustomName", customname)
         self._dbusservice.add_path("/Latency", None)
-        self._dbusservice.add_path("/FirmwareVersion", 0.1)
+        self._dbusservice.add_path("/FirmwareVersion", 0.2)
         self._dbusservice.add_path("/HardwareVersion", 0)
         self._dbusservice.add_path("/Connected", 1)
         self._dbusservice.add_path("/Role", "solarcharger")
@@ -106,7 +106,7 @@ class DbusShelly3emService:
 
         return int(value)
 
-    def _getShellyStatusUrl(self):
+    def _getStatusUrl(self):
         config = self._getConfig()
         accessType = config["DEFAULT"]["AccessType"]
 
@@ -131,11 +131,11 @@ class DbusShelly3emService:
         return json
 
     def _getRngBridgeConfig(self):
-        URL = self._getShellyStatusUrl() + "config"
+        URL = self._getStatusUrl() + "config"
         return self._requestData(URL)
 
     def _getRngBridgeState(self):
-        URL = self._getShellyStatusUrl() + "state"
+        URL = self._getStatusUrl() + "state"
         return self._requestData(URL)
 
     def _signOfLife(self):
@@ -170,6 +170,8 @@ class DbusShelly3emService:
             # Total PV power (Watts)
             self._dbusservice["/Yield/Power"] = state["p"]["vo"] * state["p"]["cu"]
             self._dbusservice["/State"] = state_map[state["c"]["st"]]
+            # Total PV energy (Kilowatthours)
+            self._dbusservice["/Yield/System"] = state["b"]["ge"] / 1000.0
             # Actual battery voltage
             self._dbusservice["/Dc/0/Voltage"] = state["b"]["vo"]
             # Actual charging current
@@ -213,6 +215,7 @@ class DbusShelly3emService:
             )
             self._dbusservice["/Pv/V"] = 0
             self._dbusservice["/Yield/Power"] = 0
+            self._dbusservice["/Yield/System"] = 0
             self._dbusservice["/State"] = 0
             self._dbusservice["/Dc/0/Voltage"] = 0
             self._dbusservice["/Dc/0/Current"] = 0
@@ -267,7 +270,9 @@ def main():
         DBusGMainLoop(set_as_default=True)
 
         # formatting
-        # def _kwh(p, v): return (str(round(v, 2)) + ' KWh')
+        def _kwh(p, v):
+            return str(round(v, 2)) + " KWh"
+
         def _a(p, v):
             return str(round(v, 1)) + " A"
 
@@ -281,10 +286,11 @@ def main():
             return str(v)
 
         # start our main-service
-        pvac_output = DbusShelly3emService(
+        pvac_output = DbusRngbridgeService(
             paths={
                 "/Pv/V": {"initial": 0, "textformat": _v},
                 "/Yield/Power": {"initial": 0, "textformat": _w},
+                "/Yield/System": {"initial": 0, "textformat": _kwh},
                 "/State": {"initial": 0, "textformat": _s},
                 "/Dc/0/Voltage": {"initial": 0, "textformat": _v},
                 "/Dc/0/Current": {"initial": 0, "textformat": _a},

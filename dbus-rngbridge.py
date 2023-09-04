@@ -154,7 +154,6 @@ class DbusRngbridgeService:
             state_map = [0, 0, 3, 7, 4, 5, 2]
             # 1: charging activated
             # Mapping `charging activated` to off might be counterintuitive, but this state is never seen
-
             # send data to DBus
             # /State    <- 0=Off                 -> 0: charging deactivated
             #              2=Fault               -> 6: current limiting (overpower)
@@ -171,7 +170,8 @@ class DbusRngbridgeService:
             self._dbusservice["/Yield/Power"] = state["p"]["vo"] * state["p"]["cu"]
             self._dbusservice["/State"] = state_map[state["c"]["st"]]
             # Total PV energy (Kilowatthours)
-            self._dbusservice["/Yield/System"] = state["b"]["ge"] / 1000.0
+            self._dbusservice["/Yield/System"] = state["b"]["to"] / 1000.0
+            self._dbusservice["/Yield/User"] = state["b"]["ge"] / 1000.0
             # Actual battery voltage
             self._dbusservice["/Dc/0/Voltage"] = state["b"]["vo"]
             # Actual charging current
@@ -216,6 +216,7 @@ class DbusRngbridgeService:
             self._dbusservice["/Pv/V"] = 0
             self._dbusservice["/Yield/Power"] = 0
             self._dbusservice["/Yield/System"] = 0
+            self._dbusservice["/Yield/User"] = 0
             self._dbusservice["/State"] = 0
             self._dbusservice["/Dc/0/Voltage"] = 0
             self._dbusservice["/Dc/0/Current"] = 0
@@ -291,6 +292,7 @@ def main():
                 "/Pv/V": {"initial": 0, "textformat": _v},
                 "/Yield/Power": {"initial": 0, "textformat": _w},
                 "/Yield/System": {"initial": 0, "textformat": _kwh},
+                "/Yield/User": {"initial": 0, "textformat": _kwh},
                 "/State": {"initial": 0, "textformat": _s},
                 "/Dc/0/Voltage": {"initial": 0, "textformat": _v},
                 "/Dc/0/Current": {"initial": 0, "textformat": _a},
